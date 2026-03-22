@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Конвертер дат "Нові Темні Віки"</title>
+  <link rel="icon" href="favicon.ico" sizes="48x48">
+  <link rel="icon" href="favicon-32.png" sizes="32x32" type="image/png">
+  <link rel="icon" href="favicon-192.png" sizes="192x192" type="image/png">
+  <link rel="icon" href="favicon-512.png" sizes="512x512" type="image/png">
+  <link rel="apple-touch-icon" href="apple-touch-icon.png">
+  <meta property="og:title" content="&quot;New Dark Ages&quot; Date Converter / Конвертер дат &quot;Нові Темні Віки&quot;">
+  <meta property="og:description" content="Convert dates between Earth and Mars calendar from Max Kidruk's New Dark Ages series">
+  <meta property="og:type" content="website">
+  <meta property="og:image" content="favicon-512.png">
+  <meta name="description" content="Bidirectional date converter between Earth Gregorian and Mars calendar from Max Kidruk's New Dark Ages book series">
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="container">
+    <header class="header">
+      <h1 class="header__title" data-i18n="title">Конвертер дат "Нові Темні Віки"</h1>
+      <div class="header__controls">
+        <button id="lang-toggle" class="toggle-btn" aria-label="Switch language">UA / EN</button>
+        <button id="theme-toggle" class="toggle-btn" aria-label="Toggle theme"><span class="theme-icon">☀️</span></button>
+      </div>
+    </header>
+
+    <main class="main">
+      <section class="converter">
+        <div class="converter__direction-bar">
+          <div class="converter__direction" id="direction-label" data-i18n="directionEarthToNtv">Земля → Марс</div>
+          <button type="button" id="swap-btn" class="btn btn--swap" aria-label="Swap direction" data-i18n-aria="swapDirection">⇄</button>
+        </div>
+
+        <div class="converter__form" id="converter-form">
+          <div class="input-group" id="earth-inputs">
+            <label data-i18n="earthDate">Дата Землі</label>
+            <div class="input-row">
+              <input type="number" id="earth-year" class="input-field" placeholder="Рік" min="1583">
+              <select id="earth-month" class="input-field">
+                <option value="">Місяць</option>
+                <option value="1">Січень</option>
+                <option value="2">Лютий</option>
+                <option value="3">Березень</option>
+                <option value="4">Квітень</option>
+                <option value="5">Травень</option>
+                <option value="6">Червень</option>
+                <option value="7">Липень</option>
+                <option value="8">Серпень</option>
+                <option value="9">Вересень</option>
+                <option value="10">Жовтень</option>
+                <option value="11">Листопад</option>
+                <option value="12">Грудень</option>
+              </select>
+              <input type="number" id="earth-day" class="input-field" placeholder="День" min="1" max="31">
+            </div>
+          </div>
+
+          <div class="input-group" id="ntv-inputs" style="display:none;">
+            <label data-i18n="ntvDate">Дата Марсу</label>
+            <div class="input-row">
+              <input type="number" id="ntv-year" class="input-field" placeholder="Рік марсіанський">
+              <select id="ntv-month" class="input-field">
+                <option value="">Місяць</option>
+              </select>
+              <input type="number" id="ntv-day" class="input-field" placeholder="Сол" min="1">
+            </div>
+          </div>
+        </div>
+
+        <div class="converter__actions">
+          <button type="button" id="convert-btn" class="btn btn--primary" data-i18n="convert">Конвертувати</button>
+        </div>
+
+        <div class="result-card" id="result-card" hidden>
+          <div class="result-card__content" id="result-content"></div>
+          <div class="result-card__warning" id="result-warning" hidden></div>
+        </div>
+
+        <div class="error-message" id="error-message" hidden></div>
+
+        <p class="converter__notice" data-i18n="notice"></p>
+      </section>
+
+      <section class="reference">
+        <h2 class="reference__title" data-i18n="referenceTitle">Марсіанські місяці</h2>
+        <div class="reference__table-wrap">
+          <table class="reference__table" id="months-table">
+            <thead>
+              <tr>
+                <th data-i18n="thMonth">#</th>
+                <th data-i18n="thName">Назва</th>
+                <th data-i18n="thSols">Соли</th>
+                <th data-i18n="thStartSol">Початковий сол</th>
+              </tr>
+            </thead>
+            <tbody id="months-tbody"></tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <p data-i18n-html="footer">На основі календаря з серії «Нові Темні Віки» <a href="https://darkages.maxkidruk.com/" target="_blank" rel="noopener noreferrer">Макса Кідрука</a></p>
+    </footer>
+  </div>
+
+  <script src="converter.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

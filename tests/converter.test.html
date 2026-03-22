@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Running...</title>
+  <style>
+    body { font-family: monospace; margin: 20px; background: #1a1a2e; color: #e0e0e0; }
+    h1 { color: #00d4ff; }
+    .pass { color: #00ff88; }
+    .fail { color: #ff4444; font-weight: bold; }
+    .summary { font-size: 1.4em; margin-top: 20px; padding: 10px; border-top: 2px solid #333; }
+    .test-group { margin: 16px 0 8px; color: #ffaa00; font-size: 1.1em; }
+  </style>
+</head>
+<body>
+  <h1>NTV Converter Test Suite</h1>
+  <div id="results"></div>
+  <script src="../converter.js"></script>
+  <script>
+    (function () {
+      var results = document.getElementById('results');
+      var passed = 0;
+      var failed = 0;
+
+      function group(name) {
+        var el = document.createElement('div');
+        el.className = 'test-group';
+        el.textContent = '▸ ' + name;
+        results.appendChild(el);
+      }
+
+      function test(name, fn) {
+        var el = document.createElement('div');
+        try {
+          fn();
+          passed++;
+          el.className = 'pass';
+          el.textContent = '  ✓ ' + name;
+        } catch (e) {
+          failed++;
+          el.className = 'fail';
+          el.textContent = '  ✗ ' + name + ' — ' + e.message;
+        }
+        results.appendChild(el);
+      }
+
+      function assert(condition, msg) {
+        if (!condition) throw new Error(msg || 'Assertion failed');
+      }
+
+      function assertEqual(actual, expected, label) {
+        if (actual !== expected) {
+          throw new Error((label || '') + ' expected ' + JSON.stringify(expected) + ', got ' + JSON.stringify(actual));
+        }
+      }
+
+      // ─── 1. Book Verification (CONV-05) ───
+
+      group('Book Verification');
+
+      test('earthToNtv(2142, 9, 23) → ntvYear 46', function () {
+        var r = NtvConverter.earthToNtv(2142, 9, 23);
+        assertEqual(r.error, false, 'error');
+        assertEqual(r.ntvYear, 46, 'ntvYear');
+      });
+
+      test('earthToNtv(2142, 9, 23) → month 8 (Козеріг / Capricorn)', function () {
+        var r = NtvConverter.earthToNtv(2142, 9, 23);
+        assertEqual(r.month, 8, 'month');
+        assertEqual(r.monthNameUa, 'Козеріг', 'monthNameUa');
+        assertEqual(r.monthNameEn, 'Capricorn', 'monthNameEn');
+      });
+
+      test('earthToNtv(2142, 9, 23) → day 22, sol 443', function () {
+        var r = NtvConverter.earthToNtv(2142, 9, 23);
+        assertEqual(r.day, 22, 'day');
+        assertEqual(r.sol, 443, 'sol');
+      });
+
+      // ─── 2. Round-trip Earth → NTV → Earth ───
+
+      group('Round-trip: Earth → NTV → Earth (±1 day tolerance)');
+
+      var earthDates = [
+        [2026, 3, 22, 'sample date'],
+        [2057, 1, 1, 'near NTV epoch'],
+        [2142, 9, 23, 'book example'],
+        [1583, 1, 1, 'minimum valid date'],
+        [2000, 1, 1, 'Y2K']
+      ];
+
+      earthDates.forEach(function (d) {
+        test(d[0] + '-' + d[1] + '-' + d[2] + ' (' + d[3] + ')', function () {
+          var ntv = NtvConverter.earthToNtv(d[0], d[1], d[2]);
+          assert(!ntv.error, 'earthToNtv error: ' + (ntv.messageKey || ''));
+          var earth = NtvConverter.ntvToEarth(ntv.ntvYear, ntv.month, ntv.day);
+          assert(!earth.error, 'ntvToEarth error: ' + (earth.messageKey || ''));
+          assertEqual(earth.year, d[0], 'year');
+          assertEqual(earth.month, d[1], 'month');
+          assert(Math.abs(earth.day - d[2]) <= 1,
+            'day off by more than 1: expected ~' + d[2] + ', got ' + earth.day);
+        });
+      });
+
+      // ─── 3. Round-trip NTV → Earth → NTV ───
+
+      group('Round-trip: NTV → Earth → NTV (±1 day tolerance)');
+
+      var ntvDates = [
+        [46, 8, 22, 'book example (1-based)'],
+        [1, 1, 1, 'NTV epoch start'],
+        [-10, 6, 30, 'negative year (D-05)']
+      ];
+
+      ntvDates.forEach(function (d) {
+        test('NTV ' + d[0] + '/' + d[1] + '/' + d[2] + ' (' + d[3] + ')', function () {
+          var earth = NtvConverter.ntvToEarth(d[0], d[1], d[2]);
+          assert(!earth.error, 'ntvToEarth error: ' + (earth.messageKey || ''));
+          var back = NtvConverter.earthToNtv(earth.year, earth.month, earth.day);
+          assert(!back.error, 'earthToNtv error: ' + (back.messageKey || ''));
+          assertEqual(back.ntvYear, d[0], 'ntvYear');
+          assertEqual(back.month, d[1], 'month');
+          assert(Math.abs(back.day - d[2]) <= 1,
+            'day off by more than 1: expected ~' + d[2] + ', got ' + back.day);
+        });
+      });
+
+      // ─── 4. Input Validation ───
+
+      group('Input Validation — earthToNtv');
+
+      test('year < 1583 returns error (D-04)', function () {
+        var r = NtvConverter.earthToNtv(1500, 1, 1);
+        assertEqual(r.error, true, 'error');
+      });
+
+      test('month 13 returns error', function () {
+        var r = NtvConverter.earthToNtv(2024, 13, 1);
+        assertEqual(r.error, true, 'error');
+      });
+
+      test('Feb 30 returns error', function () {
+        var r = NtvConverter.earthToNtv(2024, 2, 30);
+        assertEqual(r.error, true, 'error');
+      });
+
+      test('Feb 29 on leap year (2024) is valid', function () {
+        var r = NtvConverter.earthToNtv(2024, 2, 29);
+        assertEqual(r.error, false, 'error');
+      });
+
+      test('Feb 29 on non-leap year (2023) returns error', function () {
+        var r = NtvConverter.earthToNtv(2023, 2, 29);
+        assertEqual(r.error, true, 'error');
+      });
+
+      group('Input Validation — ntvToEarth');
+
+      test('month 0 returns error', function () {
+        var r = NtvConverter.ntvToEarth(46, 0, 1);
+        assertEqual(r.error, true, 'error');
+      });
+
+      test('month 13 returns error', function () {
+        var r = NtvConverter.ntvToEarth(46, 13, 1);
+        assertEqual(r.error, true, 'error');
+      });
+
+      test('day 0 returns error (1-based)', function () {
+        var r = NtvConverter.ntvToEarth(46, 1, 0);
+        assertEqual(r.error, true, 'error');
+      });
+
+      test('day 62 for Близнюки (61 sols) returns error', function () {
+        var r = NtvConverter.ntvToEarth(46, 1, 62);
+        assertEqual(r.error, true, 'error');
+      });
+
+      test('day 56 for Телець (55 sols, D-06) returns error', function () {
+        var r = NtvConverter.ntvToEarth(46, 12, 56);
+        assertEqual(r.error, true, 'error');
+      });
+
+      // ─── 5. Negative NTV Year Warning (D-05) ───
+
+      group('Negative NTV Year Warning');
+
+      test('earthToNtv(1900, 6, 15) includes pre_epoch warning', function () {
+        var r = NtvConverter.earthToNtv(1900, 6, 15);
+        assert(r.warning !== null, 'warning should not be null');
+        assertEqual(r.warning, 'pre_epoch', 'warning key');
+      });
+
+      test('earthToNtv(2142, 9, 23) has no warning', function () {
+        var r = NtvConverter.earthToNtv(2142, 9, 23);
+        assertEqual(r.warning, null, 'warning');
+      });
+
+      // ─── 6. Month Boundary Accuracy ───
+
+      group('Month Boundary');
+
+      test('Sol 1 of year maps to Близнюки day 1', function () {
+        var r = NtvConverter.earthToNtv(2057, 1, 1);
+        assert(!r.error, 'should not error');
+        assertEqual(r.month, 1, 'month should be 1 (Близнюки)');
+        assertEqual(r.day, 1, 'day should be 1 (1-based)');
+      });
+
+      // ─── 7. All Months Reachable ───
+
+      group('All 12 Months Reachable');
+
+      for (var m = 1; m <= 12; m++) {
+        (function (month) {
+          test('Month ' + month + ' reachable and round-trips', function () {
+            var earth = NtvConverter.ntvToEarth(46, month, 1);
+            assert(!earth.error, 'ntvToEarth error for month ' + month + ': ' + (earth.messageKey || ''));
+            var back = NtvConverter.earthToNtv(earth.year, earth.month, earth.day);
+            assert(!back.error, 'earthToNtv error: ' + (back.messageKey || ''));
+            assertEqual(back.month, month, 'month should round-trip');
+          });
+        })(m);
+      }
+
+      // ─── Summary ───
+
+      var total = passed + failed;
+      var summaryEl = document.createElement('div');
+      summaryEl.className = 'summary ' + (failed === 0 ? 'pass' : 'fail');
+      summaryEl.textContent = passed + '/' + total + ' tests passed' + (failed > 0 ? ' (' + failed + ' failed)' : '');
+      results.appendChild(summaryEl);
+
+      document.title = failed === 0 ? 'PASS' : 'FAIL';
+    })();
+  </script>
+</body>
+</html>
